@@ -1,6 +1,6 @@
 ---
 name: feature-sliced-design-vite
-description: Apply Feature-Sliced Design (FSD) v2.1 architecture to React + Vite projects (including TanStack Router/Query setups). Use this skill ALWAYS when working in a Vite/React codebase and the user mentions FSD, "feature-sliced", layers, slices, segments, code structure, or asks where a piece of code should live; when scaffolding a new Vite app; when refactoring; when resolving cross-imports or import-rule violations; or when deciding between app/, pages/, widgets/, features/, entities/, and shared/. Trigger even if the user does not say "FSD" explicitly but is organizing a Vite/React project into layers or asking architecture/placement questions.
+description: Apply Feature-Sliced Design (FSD) v2.1 architecture to React + Vite projects (including TanStack Router/Query setups). Use this skill ONLY when the user explicitly mentions FSD-related topics such as: "FSD", "feature-sliced", layer names (app, pages, widgets, features, entities, shared), slices, segments, import rule violations, or cross-imports; OR asks a placement question ("where should I put X", "which layer does Y go in", "can I import X from Y"); OR requests scaffolding, refactoring, or architecture review of a Vite/React project structure. Do NOT trigger for general React/Vite questions unrelated to project structure or code placement.
 ---
 
 # Feature-Sliced Design v2.1 — React + Vite
@@ -9,18 +9,21 @@ FSD is a layered architecture for frontend apps. This skill is the React+Vite va
 
 ## The one rule that matters most: the import rule
 
-A module in a slice can import only from layers **strictly below** it. Same-layer and upward imports are forbidden (the only exception is the `@x` notation for entities, below).
+A module in a slice can import only from layers **strictly below** it. Same-layer and upward imports are forbidden.
 
-```
-app        → can import: pages, widgets, features, entities, shared
-pages      → can import: widgets, features, entities, shared
-widgets    → can import: features, entities, shared
-features   → can import: entities, shared
-entities   → can import: shared   (+ other entities only via @x)
-shared     → can import: nothing above it
-```
+| Layer | Can import from |
+|-------|----------------|
+| `app` | pages, widgets, features, entities, shared |
+| `pages` | widgets, features, entities, shared |
+| `widgets` | features, entities, shared |
+| `features` | entities, shared |
+| `entities` | shared only — plus other entities via `@x` (see below) |
+| `shared` | nothing above it |
 
-If you want a feature to import another feature, or an entity to import another entity directly — stop. Lift the composition up a layer (compose both in a widget/page) or use `@x` (entities only).
+**Violation signals:**
+- feature imports another feature → lift composition to a widget or page
+- entity imports another entity directly → use `@x` notation
+- anything imports from a layer above itself → restructure, no exceptions
 
 ## Layers (top to bottom)
 
@@ -63,8 +66,8 @@ For **shared**, define a public API per segment (`shared/ui`, `shared/api`) rath
 Default to placing code **where it is used**. Start in `pages`/`widgets`. Extract to `features`/`entities` ONLY on real reuse — don't predict the future.
 
 - Form used on one page → that page's `ui` segment.
-- Same interaction on a second page → extract to `features`.
-- Premature `entities/`/`features/` is the most common FSD mistake. An entity imported in exactly one place is a smell.
+- Same interaction appears in **at least 2 distinct slices** → extract to `features`. One confirmed future use case (e.g. same feature needed in an upcoming page) also qualifies. Predicted reuse without evidence does not.
+- Extraction is premature if the code is used in **only one place and no confirmed reuse exists**. If a slice is imported in exactly one location — it belongs in that location's layer instead.
 
 Caveat for monorepo / shared-backend work: if a slice (e.g. `auth`) is genuinely shared across packages, extracting early is justified — "reuse" there is cross-package, not in-app. Judge reuse at the right scope.
 
@@ -194,10 +197,26 @@ Shared routing primitives (route constants, guards) → `shared/router` or `shar
 
 ## Anti-patterns to flag
 
-- Premature extraction into `features`/`entities` (used in one place).
+- Extracting to `features`/`entities` when the code is used in only one place (no confirmed reuse yet).
 - A feature importing another feature, or an entity importing an entity without `@x`.
 - Business logic in `shared`.
 - `components/`, `hooks/`, `utils/` as segment names.
 - Importing from a slice's internals instead of its `index.ts`.
 - Recreating the deprecated `processes` layer.
 - Zod v4 with `@hookform/resolvers` (use v3).
+
+## Non-standard or partially-migrated projects
+
+If the project does not fully follow FSD (e.g. mixed `components/` + partial layers, or legacy flat structure), do not refuse to help. Instead:
+1. Identify which parts already align with FSD layers and work within them.
+2. For new code, place it correctly per FSD rules regardless of surrounding legacy code.
+3. Flag the deviation clearly: "This file is outside FSD structure — ideally it belongs in `features/auth`. I'll place new code correctly and you can migrate the old file separately."
+4. Never silently place new code in a non-FSD location just because the project is inconsistent.
+
+**Migration priority order** (highest impact first):
+- `shared/` — foundational, everything depends on it; migrate or establish this first
+- `entities/` — widely imported; correct boundaries here reduce downstream violations
+- `features/` — frequently modified; high payoff for import rule compliance
+- `pages/` and `widgets/` — migrate last; they compose the layers above
+
+When legacy and FSD structures conflict on the same file, prefer the FSD placement for any new code and note the legacy file as a migration candidate.
