@@ -1,5 +1,5 @@
 ---
-name: feature-sliced-design-vite
+name: fsd-vite
 description: Apply Feature-Sliced Design (FSD) v2.1 architecture to React + Vite projects (including TanStack Router/Query setups). Use this skill ONLY when the user explicitly mentions FSD-related topics such as: "FSD", "feature-sliced", layer names (app, pages, widgets, features, entities, shared), slices, segments, import rule violations, or cross-imports; OR asks a placement question ("where should I put X", "which layer does Y go in", "can I import X from Y"); OR requests scaffolding, refactoring, or architecture review of a Vite/React project structure. Do NOT trigger for general React/Vite questions unrelated to project structure or code placement.
 ---
 
@@ -203,7 +203,6 @@ Shared routing primitives (route constants, guards) → `shared/router` or `shar
 - `components/`, `hooks/`, `utils/` as segment names.
 - Importing from a slice's internals instead of its `index.ts`.
 - Recreating the deprecated `processes` layer.
-- Zod v4 with `@hookform/resolvers` (use v3).
 
 ## Non-standard or partially-migrated projects
 
